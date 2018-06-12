@@ -3,6 +3,7 @@
     class="listview"
     :data="singerData"
     ref="listview"
+    
   >
     <ul>
       <li
