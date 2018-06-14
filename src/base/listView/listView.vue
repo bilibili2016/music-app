@@ -2,8 +2,10 @@
   <scroll
     class="listview"
     :data="singerData"
+    :listenScroll="listenScroll"
+    :probeType="probeType"
     ref="listview"
-    
+    @scroll="listScroll"
   >
     <ul>
       <li
@@ -29,20 +31,31 @@
         </ul>
       </li>
     </ul>
-    <div class="list-shortcut">
+    <div
+      class="list-shortcut"
+      @touchstart.stop.prevent="onshortcutTouchStart"
+      @touchmove.stop.prevent="onshortcutTouchMove"
+    >
       <ul>
         <li
           class="item"
           v-for="(item, index) in shortcutList"
           :key="index"
           :data-index="index"
-          @touchstart="onshortcutTouchStart"
+          :class="{'current': currentIndex === index}"
         >
           {{item}}
         </li>
       </ul>
     </div>
-    <div class="loading-container" v-show="!singerData.length">
+    <div class="list-fixed" v-show="fixedTitle">
+      <h1 class="fixed-title">{{fixedTitle}}</h1>
+    </div>
+    <div
+      class="loading-container"
+      v-show="!singerData.length"
+      ref="fixed"
+    >
       <loading></loading>
     </div>
   </scroll>
@@ -51,34 +64,121 @@
 <script>
 import Scroll from 'base/scroll/scroll'
 import Loading from 'base/loading/loading'
-import { getData } from 'common/js/dom'
+import {getData} from 'common/js/dom'
+
+const ANCHOR_HEIGHT = 18
+const TITLE_HEIGHT = 30
 export default {
   props: {
-    singerData: {
-      type: Array,
-      default: []
+    singerData: Array
+  },
+  data () {
+    return {
+      scrollY: -1,
+      currentIndex: 0,
+      diff: -1
     }
   },
   components: {
     Scroll,
     Loading
   },
+  created () {
+    this.touch = {}
+    this.listenScroll = true
+    this.probeType = 3
+    this.listHeight = []
+  },
   computed: {
     shortcutList () {
       return this.singerData.map((group) => {
         return group.title.substring(0, 1)
       })
+    },
+    fixedTitle () {
+      return this.singerData[this.currentIndex] ? this.singerData[this.currentIndex].title : ''
     }
   },
   methods: {
     onshortcutTouchStart (e) {
       let anchorIndex = getData(e.target, 'index')
-      this.$refs.listview.scrollToElement(this.$refs.listgroup[anchorIndex])
+      this.touch.y1 = e.touches[0].pageY
+      this.touch.anchorIndex = anchorIndex
+      this._scrollTo(anchorIndex)
+    },
+    onshortcutTouchMove (e) {
+      this.touch.y2 = e.touches[0].pageY
+      let dealt = (this.touch.y2 - this.touch.y1) / ANCHOR_HEIGHT | 0
+      let anchorIndex = parseInt(this.touch.anchorIndex) + dealt
+      this._scrollTo(anchorIndex)
+    },
+    listScroll (pos) {
+      this.scrollY = pos.y
+    },
+    _scrollTo (index) {
+      //  点击左边字母区域边界的处理
+      if (!index && index !== 0) {
+        return
+      }
+      //  滑动左边区域边界（顶部和底部）问题
+      if (index < 0) {
+        index = 0
+      } else if (index > this.listHeight.length - 2) {
+        index = this.listHeight.length - 2
+      }
+      //  点击左边字母，右边滚动到对应区域
+      this.scrollY = -this.listHeight[index]
+      this.$refs.listview.scrollToElement(this.$refs.listgroup[index], 0)
+    },
+    _calculateHeight () {
+      this.listHeight = []
+      const list = this.$refs.listgroup
+      let height = 0
+      this.listHeight.push(height)
+      for (let i in list) {
+        let item = list[i]
+        height += item.clientHeight
+        this.listHeight.push(height)
+      }
+    }
+  },
+  watch: {
+    singerData () {
+      setTimeout(() => {
+        this._calculateHeight()
+      }, 20)
+    },
+    scrollY (newY) {
+      const listHeight = this.listHeight
+      //  当滚动到顶部，newY>0
+      if (newY > 0) {
+        this.currentIndex = 0
+        return
+      }
+      //  在中间部分滚动
+      for (let i = 0; i < listHeight.length; i++) {
+        let height1 = listHeight[i]
+        let height2 = listHeight[i + 1]
+        if (-newY >= height1 && -newY < height2) {
+          this.currentIndex = i
+          this.diff = height2 + newY
+          return
+        }
+      }
+      //  当滚动到底部，且-newY大于最后一个元素的上线
+      this.currentIndex = listHeight.length - 2
+    },
+    diff (newVal) {
+      let fixedTop = (newVal > 0 && newVal < TITLE_HEIGHT) ? newVal - TITLE_HEIGHT : 0
+      if (this.fixedTop === fixedTop) {
+        return
+      }
+      this.fixedTop = fixedTop
+      this.$refs.fixed.style.transform = `translate3d(0,${fixedTop}px,0)`
     }
   }
 }
 </script>
-
 
 <style scoped lang="stylus" rel="stylesheet/stylus">
   @import "~common/stylus/variable"

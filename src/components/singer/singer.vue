@@ -62,6 +62,7 @@ export default{
 
       let ret = []
       let hot = []
+      console.log(map)
       for (let key in map) {
         let val = map[key]
         if (val.title === HOT_NAME) {
