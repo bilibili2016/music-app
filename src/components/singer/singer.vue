@@ -1,6 +1,7 @@
 <template>
   <div class="singer">
-    <list-view :singerData="singerList"></list-view>
+    <list-view :singerData="singerList" @slect="selectSinger"></list-view>
+    <router-view></router-view>
   </div>
 </template>
 
@@ -8,6 +9,7 @@
 import axios from 'axios'
 import Singer from 'common/js/singer'
 import listView from 'base/listView/listView'
+import { mapMutations } from 'vuex'
 const HOT_NAME = '热门'
 const HOT_SINGER_LEN = 10
 export default{
@@ -23,6 +25,12 @@ export default{
     this._getSingerList()
   },
   methods: {
+    selectSinger (singer) {
+      this.$router.push({
+        path: `/singer/${singer.id}`
+      })
+      this.setSinger(singer)
+    },
     _getSingerList () {
       axios.get('../../../static/mock/singerList.json')
         .then((res) => {
@@ -62,7 +70,6 @@ export default{
 
       let ret = []
       let hot = []
-      console.log(map)
       for (let key in map) {
         let val = map[key]
         if (val.title === HOT_NAME) {
@@ -75,7 +82,10 @@ export default{
         return a.title.charCodeAt(0) - b.title.charCodeAt(0)
       })
       return hot.concat(ret)
-    }
+    },
+    ...mapMutations({
+      setSinger: 'SET_SINGER'
+    })
   }
 }
 </script>

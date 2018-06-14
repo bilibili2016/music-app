@@ -20,6 +20,7 @@
             class="list-group-item"
             v-for="(item, index) in group.items"
             :key="index"
+            @click="singerClick(item)"
           >
             <img
               class="avatar"
@@ -100,6 +101,9 @@ export default {
     }
   },
   methods: {
+    singerClick (item) {
+      this.$emit('slect', item)
+    },
     onshortcutTouchStart (e) {
       let anchorIndex = getData(e.target, 'index')
       this.touch.y1 = e.touches[0].pageY
