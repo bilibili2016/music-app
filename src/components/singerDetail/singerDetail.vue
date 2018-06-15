@@ -1,19 +1,63 @@
 <template>
   <transition name="slide">
-    <div class="singer-detail">歌手详情页</div>
+    <music-list
+      :songs="songs"
+      :title="title"
+      :bgImg="bgImg"
+    ></music-list>
   </transition>
 </template>
 
 <script>
 import { mapGetters } from 'vuex'
+import { getSingerDetail } from 'api/singer'
+import { ERR_OK } from 'api/config'
+import { createSong } from 'api/song'
+import musicList from 'components/musicList/musicList'
 export default{
+  data () {
+    return {
+      songs: []
+    }
+  },
+  components: {
+    musicList
+  },
   computed: {
+    title () {
+      return this.singer.name
+    },
+    bgImg () {
+      return this.singer.avatar
+    },
     ...mapGetters([
       'singer'
     ])
   },
   created () {
-    console.log(this.singer)
+    this._getSingerDetail()
+  },
+  methods: {
+    _getSingerDetail () {
+      getSingerDetail(this.singer)
+        .then((res) => {
+          if (res.code === ERR_OK) {
+            this.songs = this._normallistSongs(res.data.list)
+            console.log(this.songs)
+          }
+        })
+    },
+    _normallistSongs (list) {
+      let ret = []
+      list.forEach((item) => {
+      //  es6对象的解构赋值
+        let {musicData} = item
+        if (musicData.songid && musicData.albumid) {
+          ret.push(createSong(musicData))
+        }
+      })
+      return ret
+    }
   }
 }
 </script>
